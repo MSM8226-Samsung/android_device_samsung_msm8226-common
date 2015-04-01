@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Inherit from qcom-common
+-include device/samsung/qcom-common/BoardConfigCommon.mk
+
 LOCAL_PATH := device/samsung/msm8226-common
 
 TARGET_SPECIFIC_HEADER_PATH := device/samsung/msm8226-common/include
-
-# Inherit from qcom-common
--include device/samsung/qcom-common/BoardConfigCommon.mk
 
 # Architecture
 TARGET_CPU_VARIANT := krait
@@ -50,7 +50,7 @@ BOARD_CHARGING_CMDLINE_VALUE := "charger"
 BOARD_CHARGER_ENABLE_SUSPEND := true
 
 # CMHW
-BOARD_HARDWARE_CLASS := $(LOCAL_PATH)/cmhw
+BOARD_HARDWARE_CLASS += device/samsung/msm8226-common/cmhw
 
 # Custom RIL class
 BOARD_RIL_CLASS := ../../../device/samsung/msm8226-common/ril/
@@ -61,14 +61,20 @@ NUM_FRAMEBUFFER_SURFACE_BUFFERS := 3
 TARGET_QCOM_DISPLAY_VARIANT := caf-new
 OVERRIDE_RS_DRIVER := libRSDriver_adreno.so
 
-# Encryption
-TARGET_HW_DISK_ENCRYPTION := true
+# Shader cache config options
+# Maximum size of the  GLES Shaders that can be cached for reuse.
+# Increase the size if shaders of size greater than 12KB are used.
+MAX_EGL_CACHE_KEY_SIZE := 12*1024
 
-# Init
-TARGET_INIT_VENDOR_LIB := libinit_msm
+# Maximum GLES shader cache size for each app to store the compiled shader
+# binaries. Decrease the size if RAM or Flash Storage size is a limitation
+# of the device.
+MAX_EGL_CACHE_SIZE := 2048*1024
 
-# Lights
-TARGET_PROVIDES_LIBLIGHT := true
+# Partitions and Vold
+BOARD_VOLD_EMMC_SHARES_DEV_MAJOR := true
+TARGET_USERIMAGES_USE_EXT4 := true
+TARGET_USE_CUSTOM_LUN_FILE_PATH := /sys/devices/platform/msm_hsusb/gadget/lun%d/file
 
 # Media
 TARGET_ENABLE_QC_AV_ENHANCEMENTS := true
@@ -78,7 +84,6 @@ TARGET_QCOM_MEDIA_VARIANT := caf-new
 TARGET_USERIMAGES_USE_EXT4 := true
 
 # Platform
-BOARD_VENDOR := samsung
 TARGET_BOARD_PLATFORM := msm8226
 TARGET_BOARD_PLATFORM_GPU := qcom-adreno305
 
@@ -98,10 +103,6 @@ BOARD_RECOVERY_SWIPE := true
 BOARD_USE_CUSTOM_RECOVERY_FONT := \"roboto_15x24.h\"
 COMMON_GLOBAL_CFLAGS += -DNO_SECURE_DISCARD
 
-# Vold
-BOARD_VOLD_EMMC_SHARES_DEV_MAJOR := true
-TARGET_USE_CUSTOM_LUN_FILE_PATH := /sys/devices/platform/msm_hsusb/gadget/lun%d/file
-
 # Wifi
 BOARD_HAS_QCOM_WLAN              := true
 BOARD_HAS_QCOM_WLAN_SDK          := true
@@ -116,3 +117,10 @@ WIFI_DRIVER_FW_PATH_STA          := "sta"
 WIFI_DRIVER_FW_PATH_AP           := "ap"
 WIFI_DRIVER_MODULE_PATH          := "/system/lib/modules/wlan.ko"
 WIFI_DRIVER_MODULE_NAME          := "wlan"
+
+WLAN_MODULES:
+	mkdir -p $(KERNEL_MODULES_OUT)/pronto
+	mv $(KERNEL_MODULES_OUT)/wlan.ko $(KERNEL_MODULES_OUT)/pronto/pronto_wlan.ko
+	ln -sf /system/lib/modules/pronto/pronto_wlan.ko $(TARGET_OUT)/lib/modules/wlan.ko
+
+TARGET_KERNEL_MODULES += WLAN_MODULES

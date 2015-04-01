@@ -1,11 +1,10 @@
-#
-# Copyright (C) 2014 The CyanogenMod Project
+# Copyright (C) 2015 The CyanogenMod Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +13,16 @@
 # limitations under the License.
 
 LOCAL_PATH:= $(call my-dir)
-# HAL module implemenation stored in
-# hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := lights.c
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog
-LOCAL_MODULE := lights.$(TARGET_BOARD_PLATFORM)
+LOCAL_SRC_FILES := wcnss_qmi_client.c
+
+LOCAL_C_INCLUDES += hardware/qcom/wlan/wcnss_service
+LOCAL_CFLAGS += -Wall
+
+LOCAL_SHARED_LIBRARIES := libc libcutils libutils liblog
+
 LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libwcnss_qmi
 
 include $(BUILD_SHARED_LIBRARY)
