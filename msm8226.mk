@@ -157,6 +157,11 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     power.msm8226
 
+# QRNG
+PRODUCT_PACKAGES += \
+    qrngd \
+    qrngp
+
 # Torch
 PRODUCT_PACKAGES += \
     Torch
