@@ -41,16 +41,28 @@ import com.android.internal.telephony.uicc.IccCardStatus;
  */
 public class SamsungMSM8226DSRIL extends RIL {
 
+    private static int msim_count = SystemProperties.getInt("ril.ICC_TYPE", 0) + SystemProperties.getInt("ril.ICC_TYPE2", 0);
+    
     public SamsungMSM8226DSRIL(Context context, int preferredNetworkType,
-            int cdmaSubscription, Integer instanceId) {
+            int cdmaSubscription, Integer instanceId) throws IllegalArgumentException {
         super(context, preferredNetworkType, cdmaSubscription, instanceId);
         mQANElements = 6;
+	if (msim_count == 2) {
+		SystemProperties.set("ro.multisim.set_audio_params", "true");
+	} else {
+		SystemProperties.set("ro.multisim.set_audio_params", "false");
+	}
     }
 
    public SamsungMSM8226DSRIL(Context context, int networkMode,
-            int cdmaSubscription) {
+            int cdmaSubscription) throws IllegalArgumentException {
         super(context, networkMode, cdmaSubscription);
         mQANElements = 6;
+	if (msim_count == 2) {
+		SystemProperties.set("ro.multisim.set_audio_params", "true");
+	} else {
+		SystemProperties.set("ro.multisim.set_audio_params", "false");
+	}
    }
 
     @Override
