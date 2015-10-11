@@ -50,22 +50,12 @@ public class SamsungMSM8226DSRIL extends RIL {
         mQANElements = 6;
 		SystemProperties.set("gsm.current.vsid", "0");//default config
 		SystemProperties.set("gsm.current.vsid2", "1");
-		if (msim_count == 2) {
-			SystemProperties.set("ro.multisim.set_audio_params", "true");
-		} else {
-			SystemProperties.set("ro.multisim.set_audio_params", "false");
-		}
     }
 
    public SamsungMSM8226DSRIL(Context context, int networkMode,
             int cdmaSubscription) {
         super(context, networkMode, cdmaSubscription);
         mQANElements = 6;
-	if (msim_count == 2) {
-		SystemProperties.set("ro.multisim.set_audio_params", "true");
-	} else {
-		SystemProperties.set("ro.multisim.set_audio_params", "false");
-	}
    }
 
     @Override
