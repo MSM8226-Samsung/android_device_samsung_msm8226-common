@@ -42,20 +42,23 @@ import com.android.internal.telephony.uicc.IccCardStatus;
 public class SamsungMSM8226DSRIL extends RIL {
 
     private static int msim_count = SystemProperties.getInt("ril.ICC_TYPE", 0) + SystemProperties.getInt("ril.ICC_TYPE2", 0);
+	private static final int RIL_UNSOL_VOICE_SYSTEM_ID = 11032;
     
     public SamsungMSM8226DSRIL(Context context, int preferredNetworkType,
-            int cdmaSubscription, Integer instanceId) throws IllegalArgumentException {
+            int cdmaSubscription, Integer instanceId){
         super(context, preferredNetworkType, cdmaSubscription, instanceId);
         mQANElements = 6;
-	if (msim_count == 2) {
-		SystemProperties.set("ro.multisim.set_audio_params", "true");
-	} else {
-		SystemProperties.set("ro.multisim.set_audio_params", "false");
-	}
+		SystemProperties.set("gsm.current.vsid", "0");//default config
+		SystemProperties.set("gsm.current.vsid2", "1");
+		if (msim_count == 2) {
+			SystemProperties.set("ro.multisim.set_audio_params", "true");
+		} else {
+			SystemProperties.set("ro.multisim.set_audio_params", "false");
+		}
     }
 
    public SamsungMSM8226DSRIL(Context context, int networkMode,
-            int cdmaSubscription) throws IllegalArgumentException {
+            int cdmaSubscription) {
         super(context, networkMode, cdmaSubscription);
         mQANElements = 6;
 	if (msim_count == 2) {
@@ -266,6 +269,16 @@ public class SamsungMSM8226DSRIL extends RIL {
             case 11021: // RIL_UNSOL_RESPONSE_HANDOVER:
                 ret = responseVoid(p);
                 break;
+			case RIL_UNSOL_VOICE_SYSTEM_ID:
+				ret = responseInts(p);
+				if(ret == 0) { //this is not sure, maybe you need judge "mInstanceId"(this is the id of sim card)
+					SystemProperties.set("gsm.current.vsid", "0");
+					SystemProperties.set("gsm.current.vsid2", "1");
+				} else {
+					SystemProperties.set("gsm.current.vsid", "1");
+					SystemProperties.set("gsm.current.vsid2", "0");
+				}
+				break;
             case 1036:
                 ret = responseVoid(p);
                 break;
