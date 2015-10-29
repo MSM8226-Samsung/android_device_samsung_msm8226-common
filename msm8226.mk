@@ -55,6 +55,7 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     camera.msm8226 \
     libboringssl-compat \
+    libstlport \
     libxml2
 
 # CRDA
