@@ -41,9 +41,6 @@ import com.android.internal.telephony.uicc.IccCardStatus;
  */
 public class SamsungMSM8226DSRIL extends RIL {
 
-    private static int msim_count = SystemProperties.getInt("ril.ICC_TYPE", 0) + SystemProperties.getInt("ril.ICC_TYPE2", 0);
-	private static final int RIL_UNSOL_VOICE_SYSTEM_ID = 11032;
-    
     public SamsungMSM8226DSRIL(Context context, int preferredNetworkType,
             int cdmaSubscription, Integer instanceId){
         super(context, preferredNetworkType, cdmaSubscription, instanceId);
@@ -68,6 +65,19 @@ public class SamsungMSM8226DSRIL extends RIL {
         rr.mParcel.writeInt(0);
 
         send(rr);
+    }
+
+    @Override
+    public void setPreferredNetworkType(int networkType, int phoneId,
+            Message response) {
+
+	if(phoneId==1)
+		SystemProperties.set("gsm.current.networt2", networkType);
+
+	if(phoneId==0)
+		SystemProperties.set("gsm.current.network", networkType);
+
+        //logd("setPreferredNetworkType: nwMode:" + networkType + ", on phoneId:" + phoneId);
     }
 
     @Override
@@ -259,16 +269,16 @@ public class SamsungMSM8226DSRIL extends RIL {
             case 11021: // RIL_UNSOL_RESPONSE_HANDOVER:
                 ret = responseVoid(p);
                 break;
-			case RIL_UNSOL_VOICE_SYSTEM_ID:
-				ret = responseInts(p);
-				if(ret == 0) { //this is not sure, maybe you need judge "mInstanceId"(this is the id of sim card)
-					SystemProperties.set("gsm.current.vsid", "0");
-					SystemProperties.set("gsm.current.vsid2", "1");
-				} else {
-					SystemProperties.set("gsm.current.vsid", "1");
-					SystemProperties.set("gsm.current.vsid2", "0");
-				}
-				break;
+            case 11032:
+                ret = responseInts(p);
+                if(ret == 0) { //this is not sure, maybe you need judge "mInstanceId"(this is the id of sim card)
+			SystemProperties.set("gsm.current.vsid", "0");
+			SystemProperties.set("gsm.current.vsid2", "1");
+                } else {
+			SystemProperties.set("gsm.current.vsid", "1");
+			SystemProperties.set("gsm.current.vsid2", "0");
+                }
+                break;
             case 1036:
                 ret = responseVoid(p);
                 break;
