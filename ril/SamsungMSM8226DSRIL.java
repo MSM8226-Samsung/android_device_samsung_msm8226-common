@@ -51,9 +51,9 @@ public class SamsungMSM8226DSRIL extends RIL {
 	SystemProperties.set("gsm.current.vsid2", "1");
     }
 
-   public SamsungMSM8226DSRIL(Context context, int networkMode,
+   public SamsungMSM8226DSRIL(Context context, int networkModes,
             int cdmaSubscription) {
-        super(context, networkMode, cdmaSubscription);
+        super(context, networkModes, cdmaSubscription, null);
         mQANElements = 6;
    }
 

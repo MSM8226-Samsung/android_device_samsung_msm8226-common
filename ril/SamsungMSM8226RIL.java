@@ -51,9 +51,9 @@ public class SamsungMSM8226RIL extends RIL {
         mQANElements = 6;
     }
 
-    public SamsungMSM8226RIL(Context context, int networkMode,
+    public SamsungMSM8226RIL(Context context, int networkModes,
             int cdmaSubscription) {
-        super(context, networkMode, cdmaSubscription);
+        super(context, networkModes, cdmaSubscription, null);
         mAudioManager = (AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE);
         mQANElements = 6;
     }
