@@ -36,6 +36,7 @@ sys.io.scheduler=bfq
 
 # Perf
 ro.vendor.extension_library=/vendor/lib/libqc-opt.so
+ro.min_freq=787200
 
 # Radio
 persist.data.netmgrd.qos.enable=false
