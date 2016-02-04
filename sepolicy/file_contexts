@@ -33,5 +33,8 @@
 # WiFi
 /data/.wifiver.info                                           u:object_r:wifi_data_file:s0
 /efs/wifi/.mac.info                                           u:object_r:wifi_efs_file:s0
-/system/bin/iptables                                          u:object_r:netd:s0
-/system/bin/ip6tables                                         u:object_r:netd:s0
+
+#Audio
+/system/bin/audiod                                            u:object_r:audiod_exec:s0
+/system/bin/auditd                                            u:object_r:logd_exec:s0
+
