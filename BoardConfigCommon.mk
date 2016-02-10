@@ -22,6 +22,9 @@ TARGET_SPECIFIC_HEADER_PATH := device/samsung/msm8226-common/include
 # Architecture
 TARGET_CPU_MEMCPY_BASE_OPT_DISABLE := true
 TARGET_CPU_VARIANT := krait
+ARCH_ARM_HAVE_TLS_REGISTER := true
+TARGET_GLOBAL_CFLAGS += -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=softfp
+TARGET_GLOBAL_CPPFLAGS += -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=softfp
 
 # Audio
 AUDIO_FEATURE_ENABLED_LOW_LATENCY_CAPTURE := true
