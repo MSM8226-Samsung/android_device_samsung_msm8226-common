@@ -44,10 +44,24 @@ on early-init
     symlink /data/tombstones /tombstones
 
 on init
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /mnt/media_rw/sdcard1 0700 media_rw media_rw
+    mkdir /mnt/media_rw/usbdisk 0700 media_rw media_rw
+
+    export EXTERNAL_STORAGE /sdcard
+    export SECONDARY_STORAGE /storage/sdcard1
+    mkdir /storage/sdcard1 0555 root root
 
     # Support legacy paths
     symlink /sdcard /mnt/sdcard
     symlink /sdcard /storage/sdcard0
+
+    # map "real" external storages paths also in same way. backwards compatibility.
+    symlink /storage/sdcard1 /mnt/sdcard1
+    symlink /storage/usbdisk /mnt/usbdisk
+
+    mkdir /storage/sdcard1 0700 root root
+    mkdir /storage/usbdisk 0700 root root
 
 on fs
     mount_all fstab.qcom
