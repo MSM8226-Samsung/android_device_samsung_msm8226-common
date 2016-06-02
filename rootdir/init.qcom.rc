@@ -30,7 +30,7 @@ import init.qcom.usb.rc
 import init.target.rc
 
 on early-init
-    export LD_SHIM_LIBS /system/lib/hw/camera.vendor.msm8226.so|libboringssl-compat.so:/system/vendor/lib/libqomx_jpegenc.so|libboringssl-compat.so:/system/lib/libcrypto.so|libboringssl-compat.so:/system/lib/libril.so|libril_shim.so
+    export LD_SHIM_LIBS /system/lib/libril.so|libril_shim.so
 
     mount debugfs debugfs /sys/kernel/debug
 
@@ -44,10 +44,24 @@ on early-init
     symlink /data/tombstones /tombstones
 
 on init
+    # See storage config details at http://source.android.com/tech/storage/
+    mkdir /mnt/media_rw/sdcard1 0700 media_rw media_rw
+    mkdir /mnt/media_rw/usbdisk 0700 media_rw media_rw
+
+    export EXTERNAL_STORAGE /sdcard
+    export SECONDARY_STORAGE /storage/sdcard1
+    mkdir /storage/sdcard1 0555 root root
 
     # Support legacy paths
     symlink /sdcard /mnt/sdcard
     symlink /sdcard /storage/sdcard0
+
+    # map "real" external storages paths also in same way. backwards compatibility.
+    symlink /storage/sdcard1 /mnt/sdcard1
+    symlink /storage/usbdisk /mnt/usbdisk
+
+    mkdir /storage/sdcard1 0700 root root
+    mkdir /storage/usbdisk 0700 root root
 
 on fs
     mount_all fstab.qcom
@@ -483,8 +497,8 @@ on boot
 
     # Assign TCP buffer thresholds to be ceiling value of technology maximums
     # Increased technology maximums should be reflected here.
-    write /proc/sys/net/core/rmem_max  8388608
-    write /proc/sys/net/core/wmem_max  8388608
+    write /proc/sys/net/core/rmem_max  2097152
+    write /proc/sys/net/core/wmem_max  2097152
 
 on charger
     wait /dev/block/platform/msm_sdcc.1/by-name/system
@@ -591,6 +605,12 @@ service wcnss-service /system/bin/wcnss_service
     user system
     group system wifi
     oneshot
+
+service wifi-crda /system/bin/sh /system/etc/init.crda.sh
+   class late_start
+   user root
+   disabled
+   oneshot
 
 # WPA
 service p2p_supplicant /system/bin/wpa_supplicant \
