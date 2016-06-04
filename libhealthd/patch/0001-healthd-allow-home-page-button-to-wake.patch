@@ -1,0 +1,25 @@
+From 80f3ad629330ed2525512ae3a1439f4d27b4088b Mon Sep 17 00:00:00 2001
+From: sub77 <sub77@ymail.com>
+Date: Fri, 3 Jun 2016 20:31:00 -0500
+Subject: [PATCH] healthd: allow home(page) button to wake
+
+Change-Id: I439040060a09ba206a123c736d729ee1f6d2cdb6
+---
+ healthd/healthd_mode_charger.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/healthd/healthd_mode_charger.cpp b/healthd/healthd_mode_charger.cpp
+index eb93d6a..26d3fc0 100644
+--- a/healthd/healthd_mode_charger.cpp
++++ b/healthd/healthd_mode_charger.cpp
+@@ -660,6 +660,7 @@ static void handle_input_state(struct charger *charger, int64_t now)
+ {
+     process_key(charger, KEY_POWER, now);
+     process_key(charger, KEY_HOME, now);
++    process_key(charger, KEY_HOMEPAGE, now);
+ 
+     if (charger->next_key_check != -1 && now > charger->next_key_check)
+         charger->next_key_check = -1;
+-- 
+1.9.1
+
