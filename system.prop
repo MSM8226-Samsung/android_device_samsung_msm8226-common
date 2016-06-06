@@ -1,10 +1,8 @@
 # Android Run Time
 ro.sys.fw.dex2oat_thread_count=4
+dalvik.vm.dex2oat-swap=false
 dalvik.vm.dex2oat-flags=--no-watch-dog 
 
-# Art
-dalvik.vm.dex2oat-flags=--no-watch-dog 
- 
 # Audio
 media.aac_51_output_enabled=true
 mm.enable.smoothstreaming=true
