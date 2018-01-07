@@ -1,0 +1,2 @@
+allow untrusted_app fuse:lnk_file read;
+allow untrusted_app sysfs:file { getattr open read };
