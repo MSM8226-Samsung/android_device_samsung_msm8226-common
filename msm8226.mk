@@ -40,6 +40,15 @@ PRODUCT_PACKAGES += \
     libqcomvoiceprocessing \
     tinymix
 
+PRODUCT_PACKAGES += \
+    libshims_camera \
+    libshims_thermal
+
+
+
+PRODUCT_PACKAGES += \
+    libwvm_shim
+
 # Camera
 PRODUCT_PACKAGES += \
     camera.msm8226 \
