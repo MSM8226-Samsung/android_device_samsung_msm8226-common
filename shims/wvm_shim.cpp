@@ -17,11 +17,31 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <media/IMediaSource.h>
+#include <cutils/log.h>
+#include <string.h>
+#include <media/stagefright/MediaBufferGroup.h>
+#include <media/stagefright/MediaSource.h>
 
 /* MediaBufferGroup::MediaBufferGroup */
-extern "C" int _ZN7android16MediaBufferGroupC1Ej(unsigned int);
-extern "C" int _ZN7android16MediaBufferGroupC1Ev() {
-    return _ZN7android16MediaBufferGroupC1Ej(0);
+//extern "C" int _ZN7android16MediaBufferGroupC1Ej(unsigned int);
+//extern "C" int _ZN7android16MediaBufferGroupC1Ev() {
+//    return _ZN7android16MediaBufferGroupC1Ej(0);
+//}
+
+
+extern android::MediaBufferGroup*   _ZN7android16MediaBufferGroupC1Ev() {
+#ifdef AOSP
+    return new android::MediaBufferGroup();
+#else
+    return new android::MediaBufferGroup(0);
+#endif
+}
+
+extern int _ZN7android16MediaBufferGroup14acquire_bufferEPPNS_11MediaBufferEb(void *obj,android::MediaBuffer **out, 
+								bool nonBlocking, size_t requestedSize) {
+    android::MediaBufferGroup *mbg = static_cast<android::MediaBufferGroup *>(obj);
+    return mbg->acquire_buffer(out,nonBlocking,requestedSize);
+
 }
 
 extern "C" {
