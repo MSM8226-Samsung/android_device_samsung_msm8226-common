@@ -41,6 +41,12 @@ PRODUCT_PACKAGES += \
     tinymix
 
 PRODUCT_PACKAGES += \
+    libshims_camera \
+    libshims_thermal
+
+
+
+PRODUCT_PACKAGES += \
     libwvm_shim
 
 # Camera
