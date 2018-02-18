@@ -25,10 +25,6 @@ ro.qualcomm.bt.hci_transport=smd
 # Camera
 camera2.portability.force_api=1
 
-# HAX - remove ASAP
-media.stagefright.legacyencoder=true
-media.stagefright.less-secure=true
-
 # Dalvik
 dalvik.vm.heapstartsize=8m
 dalvik.vm.heapgrowthlimit=128m

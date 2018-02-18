@@ -51,6 +51,7 @@ PRODUCT_PACKAGES += \
 
 # Camera
 PRODUCT_PACKAGES += \
+    camera.vendor.msm8226 \
     camera.msm8226 \
     libboringssl-compat \
     libstlport \
