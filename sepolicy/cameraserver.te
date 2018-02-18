@@ -1,2 +1,3 @@
 allow cameraserver system_data_file:sock_file write;
 allow cameraserver camera_socket:sock_file write;
+allow cameraserver mpctl_socket:dir search;
