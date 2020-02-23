@@ -5207,6 +5207,9 @@ uint8_t QCameraParameters::getNumOfSnapshots()
     if (numOfSnapshot <= 0) {
         numOfSnapshot = 1; // set to default value
     }
+
+    ALOGE("%s: numOfSnapshot(%d)", __func__, numOfSnapshot);
+
     return (uint8_t)numOfSnapshot;
 }
 

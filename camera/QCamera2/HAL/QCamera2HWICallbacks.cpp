@@ -1100,10 +1100,11 @@ void * QCameraCbNotifier::cbNotifyRoutine(void * data)
         } while (ret != 0);
 
         camera_cmd_type_t cmd = cmdThread->getCmd();
-        ALOGV("%s: get cmd %d", __func__, cmd);
+        ALOGE("%s: get cmd %d", __func__, cmd);
         switch (cmd) {
         case CAMERA_CMD_TYPE_START_DATA_PROC:
             {
+		ALOGE("%s: doing snapshot stuff", __func__);
                 isSnapshotActive = TRUE;
                 numOfSnapshotExpected = pme->mParent->numOfSnapshotsExpected();
                 numOfSnapshotRcvd = 0;
@@ -1175,6 +1176,7 @@ void * QCameraCbNotifier::cbNotifyRoutine(void * data)
                             break;
                         case QCAMERA_DATA_SNAPSHOT_CALLBACK:
                             {
+				ALOGE("%s: got snapshot callback", __func__);
                                 if (TRUE == isSnapshotActive && pme->mDataCb ) {
                                     numOfSnapshotRcvd++;
                                     if (numOfSnapshotExpected > 0 &&
@@ -1309,7 +1311,9 @@ void QCameraCbNotifier::setCallbacks(camera_notify_callback notifyCb,
  *==========================================================================*/
 int32_t QCameraCbNotifier::startSnapshots()
 {
+    ALOGE("%s: E", __func__);
     return mProcTh.sendCmd(CAMERA_CMD_TYPE_START_DATA_PROC, FALSE, TRUE);
+    ALOGE("%s: X", __func__);
 }
 
 /*===========================================================================
@@ -1323,7 +1327,9 @@ int32_t QCameraCbNotifier::startSnapshots()
  *==========================================================================*/
 void QCameraCbNotifier::stopSnapshots()
 {
+    ALOGE("%s: E", __func__);
     mProcTh.sendCmd(CAMERA_CMD_TYPE_STOP_DATA_PROC, FALSE, TRUE);
+    ALOGE("%s: X", __func__);
 }
 
 }; // namespace qcamera

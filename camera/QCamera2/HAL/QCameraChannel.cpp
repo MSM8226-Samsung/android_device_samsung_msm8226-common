@@ -458,6 +458,7 @@ QCameraPicChannel::~QCameraPicChannel()
  *==========================================================================*/
 int32_t QCameraPicChannel::takePicture(uint8_t num_of_snapshot)
 {
+    ALOGE("%s: num_of_snapshot(%d)", __func__, num_of_snapshot);
     int32_t rc = m_camOps->request_super_buf(m_camHandle,
                                              m_handle,
                                              num_of_snapshot);
@@ -643,6 +644,7 @@ int32_t QCameraReprocessChannel::addReprocStreamsFromSource(QCameraAllocator& al
             if (pStream->isTypeOf(CAM_STREAM_TYPE_METADATA)) {
                 // Skip metadata for reprocess now because PP module cannot handle meta data
                 // May need furthur discussion if Imaginglib need meta data
+		ALOGE("%s: skip metadata", __func__);
                 continue;
             }
 

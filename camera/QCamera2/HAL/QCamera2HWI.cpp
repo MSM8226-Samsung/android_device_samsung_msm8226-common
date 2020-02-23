@@ -590,7 +590,7 @@ int QCamera2HardwareInterface::take_picture(struct camera_device *device)
     ALOGD("[KPI Perf] %s: E", __func__);
     ALOGE("[KPI Perf] %s: %d: Compiled at %s", __func__, __LINE__, __TIME__);
     hw->lockAPI();
-#if 0
+#if 1
     ALOGE("[KPI Perf] %s: sending that weird internal command", __func__);
     qcamera_sm_evt_command_payload_t payload;
     memset(&payload, 0, sizeof(qcamera_sm_evt_command_payload_t));
@@ -608,12 +608,14 @@ int QCamera2HardwareInterface::take_picture(struct camera_device *device)
 
     clock_t begin = clock();
 
+#if 1
     /* Prepare snapshot in case LED needs to be flashed */
     ret = hw->processAPI(QCAMERA_SM_EVT_PREPARE_SNAPSHOT, NULL);
     if (ret == NO_ERROR) {
         hw->waitAPIResult(QCAMERA_SM_EVT_PREPARE_SNAPSHOT);
         ret = hw->m_apiResult.status;
     }
+#endif
 
     clock_t end = clock();
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
@@ -1337,8 +1339,9 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
     switch (stream_type) {
     case CAM_STREAM_TYPE_PREVIEW:
         {
+		ALOGE("%s: CAM_STREAM_TYPE_PREVIEW", __func__);
             if (mParameters.isZSLMode()) {
-                bufferCnt = zslQBuffers + minCircularBufNum;
+                bufferCnt = 12;
             } else {
                 bufferCnt = CAMERA_MIN_STREAMING_BUFFERS +
                             mParameters.getMaxUnmatchedFramesInQueue();
@@ -1347,6 +1350,7 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
         break;
     case CAM_STREAM_TYPE_POSTVIEW:
         {
+		ALOGE("%s: POSTVIEW", __func__);
             bufferCnt = minCaptureBuffers +
                         mParameters.getMaxUnmatchedFramesInQueue() +
                         mParameters.getNumOfExtraHDRBufsIfNeeded() +
@@ -1355,8 +1359,9 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
         break;
     case CAM_STREAM_TYPE_SNAPSHOT:
         {
+		ALOGE("%s: CAM_STREAM_TYPE_SNAPSHOT, minCircularBufNum(%d)", __func__, minCircularBufNum);
             if (mParameters.isZSLMode()) {
-                bufferCnt = zslQBuffers + minCircularBufNum;
+                bufferCnt = 12;
             } else {
                 bufferCnt = minCaptureBuffers +
                             mParameters.getMaxUnmatchedFramesInQueue() +
@@ -1366,6 +1371,8 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
         }
         break;
     case CAM_STREAM_TYPE_RAW:
+	{
+		ALOGE("%s: CAM_STREAM_TYPE_RAW", __func__);
         if (mParameters.isZSLMode()) {
             bufferCnt = zslQBuffers + CAMERA_MIN_STREAMING_BUFFERS;
         } else {
@@ -1374,9 +1381,11 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
                         mParameters.getNumOfExtraHDRBufsIfNeeded() +
                         CAMERA_MIN_STREAMING_BUFFERS;
         }
+	}
         break;
     case CAM_STREAM_TYPE_VIDEO:
         {
+		ALOGE("%s: CAM_STREAM_TYPE_VIDEO", __func__);
             bufferCnt = CAMERA_MIN_VIDEO_BUFFERS +
                         mParameters.getMaxUnmatchedFramesInQueue() +
                         CAMERA_MIN_STREAMING_BUFFERS;
@@ -1384,17 +1393,13 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
         break;
     case CAM_STREAM_TYPE_METADATA:
         {
-            bufferCnt = minCaptureBuffers +
-                        mParameters.getMaxUnmatchedFramesInQueue() +
-                        mParameters.getNumOfExtraHDRBufsIfNeeded() +
-                        CAMERA_MIN_STREAMING_BUFFERS;
-            if (bufferCnt < zslQBuffers + minCircularBufNum) {
-                bufferCnt = zslQBuffers + minCircularBufNum;
-            }
+		ALOGE("%s: CAM_STREAM_TYPE_METADATA", __func__);
+            bufferCnt = 12;
         }
         break;
     case CAM_STREAM_TYPE_OFFLINE_PROC:
         {
+		ALOGE("%s: CAM_STREAM_TYPE_OFFLINE_PROC", __func__);
             bufferCnt = minCaptureBuffers +
                         mParameters.getMaxUnmatchedFramesInQueue();
             if (bufferCnt < CAMERA_MIN_STREAMING_BUFFERS) {
@@ -1408,6 +1413,8 @@ uint8_t QCamera2HardwareInterface::getBufNumRequired(cam_stream_type_t stream_ty
         bufferCnt = 0;
         break;
     }
+
+    ALOGE("%s: bufferCnt(%d)", __func__, bufferCnt);
 
     return bufferCnt;
 }
@@ -2029,7 +2036,7 @@ int QCamera2HardwareInterface::takePicture()
         if (NULL != pZSLChannel) {
             // start postprocessor
             m_postprocessor.start(pZSLChannel);
-
+	    ALOGE("%s: numSnapshots(%d)", __func__, numSnapshots);
             rc = pZSLChannel->takePicture(numSnapshots);
             if (rc != NO_ERROR) {
                 ALOGE("%s: cannot take ZSL picture", __func__);
@@ -2265,6 +2272,8 @@ int QCamera2HardwareInterface::registerFaceImage(void *img_ptr,
 {
     int rc = NO_ERROR;
     faceID = -1;
+
+    ALOGE("%s: reached this func", __func__);
 
     if (img_ptr == NULL || config == NULL) {
         ALOGE("%s: img_ptr or config is NULL", __func__);
@@ -3317,16 +3326,19 @@ QCameraReprocessChannel *QCamera2HardwareInterface::addOnlineReprocChannel(
     // pp feature config
     cam_pp_feature_config_t pp_config;
     memset(&pp_config, 0, sizeof(cam_pp_feature_config_t));
+#if 1
     if (gCamCapability[mCameraId]->min_required_pp_mask & CAM_QCOM_FEATURE_SHARPNESS) {
         pp_config.feature_mask |= CAM_QCOM_FEATURE_SHARPNESS;
         pp_config.sharpness = mParameters.getInt(QCameraParameters::KEY_QC_SHARPNESS);
     }
+
 
     if (mParameters.isWNREnabled()) {
         pp_config.feature_mask |= CAM_QCOM_FEATURE_DENOISE2D;
         pp_config.denoise2d.denoise_enable = 1;
         pp_config.denoise2d.process_plates = mParameters.getWaveletDenoiseProcessPlate();
     }
+#endif
 
 #if 0
     if (isCACEnabled()) {
@@ -3352,7 +3364,7 @@ QCameraReprocessChannel *QCamera2HardwareInterface::addOnlineReprocChannel(
     }
 #endif
 
-    uint8_t minStreamBufNum = mParameters.getNumOfSnapshots();
+    uint8_t minStreamBufNum = mParameters.getNumOfSnapshots(); // Only returns 1!!! we need 12
     // we need this somehow...
     // In a later HAL this gets fixed by using a longshot which we dont support (yet?).
     minStreamBufNum = getBufNumRequired(CAM_STREAM_TYPE_OFFLINE_PROC);
@@ -4140,7 +4152,7 @@ bool QCamera2HardwareInterface::needReprocess()
         return true;
     }
 
-    return needRotationReprocess();
+    return false;
 }
 
 /*===========================================================================
@@ -4397,6 +4409,7 @@ int32_t QCamera2HardwareInterface::setFaceDetection(bool enabled)
 int32_t QCamera2HardwareInterface::prepareHardwareForSnapshot(int32_t afNeeded)
 {
     ALOGD("[KPI Perf] %s: Prepare hardware such as LED afNeeded=%d",__func__, afNeeded);
+    //setLockCAF(true);
     return mCameraHandle->ops->prepare_snapshot(mCameraHandle->camera_handle,
                                                 afNeeded);
 }

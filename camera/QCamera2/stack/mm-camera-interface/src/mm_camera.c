@@ -93,11 +93,16 @@ mm_channel_t * mm_camera_util_get_channel_by_handler(
  *==========================================================================*/
 uint8_t mm_camera_util_chip_is_a_family(void)
 {
-#ifdef USE_A_FAMILY
-    return TRUE;
-#else
-    return FALSE;
-#endif
+    int id = 0;
+    FILE *fp;
+    if ((fp = fopen("/sys/devices/system/soc/soc0/id", "r")) != NULL) {
+        fscanf(fp, "%d", &id);
+        fclose(fp);
+    }
+    if (id == 126)
+        return FALSE;
+    else
+        return TRUE;
 }
 
 /*===========================================================================
@@ -938,6 +943,8 @@ int32_t mm_camera_start_channel(mm_camera_obj_t *my_obj,
     int32_t rc = -1;
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
+
+    ALOGE("%s: NOOOOO", __func__);
 
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);

@@ -132,6 +132,12 @@ typedef struct{
 } cam_capability_t;
 
 typedef enum {
+    CAM_STREAM_CONSUMER_DISPLAY,    /* buf to be displayed */
+    CAM_STREAM_CONSUMER_VIDEO_ENC,  /* buf to be encoded by video */
+    CAM_STREAM_CONSUMER_JPEG_ENC,   /* ZSL YUV buf to be fed back to JPEG */
+} cam_stream_consumer_t;
+
+typedef enum {
     CAM_STREAM_PARAM_TYPE_DO_REPROCESS = CAM_INTF_PARM_DO_REPROCESS,
     CAM_STREAM_PARAM_TYPE_SET_BUNDLE_INFO = CAM_INTF_PARM_SET_BUNDLE,
     CAM_STREAM_PARAM_TYPE_MAX
@@ -149,6 +155,10 @@ typedef struct {
 
     cam_per_frame_pp_config_t frame_pp_config; /* per frame post-proc configuration */
 } cam_reprocess_param;
+
+typedef struct {
+    uint32_t flip_mask;
+} cam_flip_mode_t;
 
 typedef struct {
     cam_stream_param_type_e type;

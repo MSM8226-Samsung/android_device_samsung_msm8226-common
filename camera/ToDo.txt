@@ -1,0 +1,50 @@
+cam_padding_info_t	0xc			vs	
+cam_frame_len_offset_t	0x108			vs	
+mm_camera_cmd_thread_t	0x2c			vs	0x2c
+mm_stream_data_cb_t	0x30			vs	not in HAL :(
+mm_camera_cmdcb_type_t	4			vs	not in HAL :(
+mm_camera_buf_info_t	0xc			vs	0xc
+mm_camera_req_buf_t	4			vs	not in HAL :(
+mm_camera_super_buf_t	0x1c			vs	
+mm_camera_cmdcb_t	0x70			vs	
+mm_camera_poll_thread_type_t	4		vs	
+mm_camera_poll_entry_t	0x10			vs	
+mm_camera_poll_thread_t	0x94			vs	
+mm_camera_buf_notify_t	4			vs	
+mm_stream_data_cb_t	0xc			vs	
+mm_stream_buf_status_t	3			vs	
+mm_stream_t		0x1b4			vs	
+mm_evt_paylod_config_stream_t	8		vs	
+mm_evt_paylod_set_get_stream_parms_t	8	vs	
+mm_evt_paylod_do_stream_action_t	8	vs	
+mm_evt_paylod_map_stream_buf_t	0x18		vs	
+mm_evt_paylod_unmap_stream_buf_t	0x10	vs	
+mm_channel_queue_node_t	0x3c			vs	0x3c
+mm_channel_queue_t	0x3c			vs	
+mm_channel_bundle_t	0x48			vs	0x48
+mm_channel_t	0x820				vs	0x820
+mm_channel_pp_info_t	0x10			vs	
+mm_camera_evt_entry_t	8			vs	
+mm_camera_evt_obj_t	0x24			vs	
+mm_camera_obj_t		0x831c			vs	0x831c
+mm_camera_buf_def_t	0x20c			vs	0x20c
+mm_camera_event_t	8			vs	8
+mm_camera_map_unmap_ops_tbl_t	0xc		vs	
+mm_camera_stream_mem_vtbl_t	0x14		vs	
+mm_camera_stream_config_t	0x44		vs	not in HAL :(
+mm_camera_channel_attr_t	0xc		vs	0xc
+mm_camera_vtbl_t	8			vs	not in HAL  :(
+
+
+
+done:
+
+mm_camera_obj_t
+mm_channel_t
+mm_camera_evt_obj_t
+mm_camera_evt_entry_t
+mm_camera_event_notify_t
+mm_camera_poll_thread_t
+mm_camera_cmd_thread_t
+mm_camera_vtbl_t
+mm_camera_event_t
