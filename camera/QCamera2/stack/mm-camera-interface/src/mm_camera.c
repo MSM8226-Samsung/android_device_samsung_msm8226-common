@@ -944,8 +944,6 @@ int32_t mm_camera_start_channel(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
-    ALOGE("%s: NOOOOO", __func__);
-
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);

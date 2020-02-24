@@ -27,7 +27,6 @@
  *
  */
 
-#include <dlfcn.h>
 #include <pthread.h>
 #include <errno.h>
 #include <sys/ioctl.h>
@@ -48,11 +47,6 @@ static mm_camera_ctrl_t g_cam_ctrl = {0, {{0}}, {0}};
 
 static pthread_mutex_t g_handler_lock = PTHREAD_MUTEX_INITIALIZER;
 static uint16_t g_handler_history_count = 0; /* history count for handler */
-
-//static pthread_mutex_t handle_lock = PTHREAD_MUTEX_INITIALIZER;
-void *my_handle = NULL;
-mm_camera_ops_t *my_camera_ops;
-mm_camera_vtbl_t* my_camera_vtbl;
 
 /*===========================================================================
  * FUNCTION   : mm_camera_util_generate_handler
@@ -125,22 +119,17 @@ const char *mm_camera_util_get_dev_name(uint32_t cam_handle)
  * RETURN     : ptr to the camera object stored in global variable
  * NOTE       : caller should not free the camera object ptr
  *==========================================================================*/
-
-typedef mm_camera_obj_t* (*mm_camera_util_get_camera_by_handler_t)(uint32_t);
-
 mm_camera_obj_t* mm_camera_util_get_camera_by_handler(uint32_t cam_handle)
 {
+    mm_camera_obj_t *cam_obj = NULL;
+    uint8_t cam_idx = mm_camera_util_get_index_by_handler(cam_handle);
 
-	ALOGE("%s: cam_handle(%d)", __func__, cam_handle);
-
-        mm_camera_util_get_camera_by_handler_t my_camera_util_get_camera_by_handler;
-	my_camera_util_get_camera_by_handler = (mm_camera_util_get_camera_by_handler_t)dlsym(my_handle, "mm_camera_util_get_camera_by_handler");
-	if (my_camera_util_get_camera_by_handler) {
-		return my_camera_util_get_camera_by_handler(cam_handle);
-	} else {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return NULL;
-	}
+    if (cam_idx < MM_CAMERA_MAX_NUM_SENSORS &&
+        (NULL != g_cam_ctrl.cam_obj[cam_idx]) &&
+        (cam_handle == g_cam_ctrl.cam_obj[cam_idx]->my_hdl)) {
+        cam_obj = g_cam_ctrl.cam_obj[cam_idx];
+    }
+    return cam_obj;
 }
 
 /*===========================================================================
@@ -155,16 +144,12 @@ mm_camera_obj_t* mm_camera_util_get_camera_by_handler(uint32_t cam_handle)
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
 static int32_t mm_camera_intf_query_capability(uint32_t camera_handle)
 {
-    ALOGE("%s: no idea but we need to do this with the stock stuff. Some mutex locks endlessly...", __func__);
-    return my_camera_ops->query_capability(camera_handle);
-
     int32_t rc = -1;
     mm_camera_obj_t * my_obj = NULL;
 
-    CDBG_ERROR("%s E: camera_handler = %d ", __func__, camera_handle);
+    CDBG("%s E: camera_handler = %d ", __func__, camera_handle);
 
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
@@ -176,7 +161,7 @@ static int32_t mm_camera_intf_query_capability(uint32_t camera_handle)
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
-    CDBG_ERROR("%s :X rc = %d", __func__, rc);
+    CDBG("%s :X rc = %d", __func__, rc);
     return rc;
 }
 
@@ -196,9 +181,6 @@ static int32_t mm_camera_intf_query_capability(uint32_t camera_handle)
  *              domain socket. Corresponding fields of parameters to be set
  *              are already filled in by upper layer caller.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_set_parms_t)(mm_camera_obj_t*, parm_buffer_t*);
-
 static int32_t mm_camera_intf_set_parms(uint32_t camera_handle,
                                         parm_buffer_t *parms)
 {
@@ -208,18 +190,10 @@ static int32_t mm_camera_intf_set_parms(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    mm_camera_set_parms_t camera_set_parms;
-	camera_set_parms = (mm_camera_set_parms_t)dlsym(my_handle, "mm_camera_set_parms");
-	if (!camera_set_parms) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_set_parms(my_obj, parms);
+        rc = mm_camera_set_parms(my_obj, parms);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -244,9 +218,6 @@ static int32_t mm_camera_intf_set_parms(uint32_t camera_handle,
  *              fields of requested parameters will be filled in by server with
  *              detailed information.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_get_parms_t)(mm_camera_obj_t*, parm_buffer_t*);
-
 static int32_t mm_camera_intf_get_parms(uint32_t camera_handle,
                                         parm_buffer_t *parms)
 {
@@ -256,18 +227,10 @@ static int32_t mm_camera_intf_get_parms(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    mm_camera_get_parms_t camera_get_parms;
-	camera_get_parms = (mm_camera_get_parms_t)dlsym(my_handle, "mm_camera_get_parms");
-	if (!camera_get_parms) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_get_parms(my_obj, parms);
+        rc = mm_camera_get_parms(my_obj, parms);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -288,9 +251,6 @@ static int32_t mm_camera_intf_get_parms(uint32_t camera_handle,
  * NOTE       : if this call success, we will always assume there will
  *              be an auto_focus event following up.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_do_auto_focus_t)(mm_camera_obj_t*);
-
 static int32_t mm_camera_intf_do_auto_focus(uint32_t camera_handle)
 {
     int32_t rc = -1;
@@ -299,20 +259,10 @@ static int32_t mm_camera_intf_do_auto_focus(uint32_t camera_handle)
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_do_auto_focus_t camera_do_auto_focus;
-	camera_do_auto_focus = (mm_camera_do_auto_focus_t)dlsym(my_handle, "mm_camera_do_auto_focus");
-	if (!camera_do_auto_focus) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_do_auto_focus(my_obj);
+        rc = mm_camera_do_auto_focus(my_obj);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -331,9 +281,6 @@ static int32_t mm_camera_intf_do_auto_focus(uint32_t camera_handle)
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef uint32_t (*camera_cancel_auto_focus_t)(mm_camera_obj_t*);
-
 static int32_t mm_camera_intf_cancel_auto_focus(uint32_t camera_handle)
 {
     int32_t rc = -1;
@@ -342,20 +289,10 @@ static int32_t mm_camera_intf_cancel_auto_focus(uint32_t camera_handle)
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    camera_cancel_auto_focus_t cancel_auto_focus_t;
-	cancel_auto_focus_t = (camera_cancel_auto_focus_t)dlsym(my_handle, "mm_camera_cancel_auto_focus");
-	if (!cancel_auto_focus_t) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = cancel_auto_focus_t(my_obj);
+        rc = mm_camera_cancel_auto_focus(my_obj);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -375,9 +312,6 @@ static int32_t mm_camera_intf_cancel_auto_focus(uint32_t camera_handle)
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_prepare_snapshot_t)(mm_camera_obj_t*, int32_t);
-
 static int32_t mm_camera_intf_prepare_snapshot(uint32_t camera_handle,
                                                int32_t do_af_flag)
 {
@@ -387,24 +321,34 @@ static int32_t mm_camera_intf_prepare_snapshot(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_prepare_snapshot_t camera_prepare_snapshot;
-	camera_prepare_snapshot = (mm_camera_prepare_snapshot_t)dlsym(my_handle, "mm_camera_prepare_snapshot");
-	if (!camera_prepare_snapshot) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_prepare_snapshot(my_obj, do_af_flag);
+        rc = mm_camera_prepare_snapshot(my_obj, do_af_flag);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
     return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : mm_camera_intf_unprepare_snapshot
+ *
+ * DESCRIPTION: unprepare hardware for snapshot
+ *
+ * PARAMETERS :
+ *   @camera_handle: camera handle
+ *   @do_af_flag   : flag indicating if AF is needed
+ *
+ * RETURN     : int32_t type of status
+ *              0  -- success
+ *              -1 -- failure
+ *==========================================================================*/
+static int32_t mm_camera_intf_unprepare_snapshot(uint32_t camera_handle,
+                                               int32_t do_af_flag)
+{
+	CDBG_ERROR("%s: not yet implemented, camera_handle(%d), do_af_flag(%d)", __func__, camera_handle, do_af_flag);
+	return -1;
 }
 
 /*===========================================================================
@@ -421,9 +365,6 @@ static int32_t mm_camera_intf_prepare_snapshot(uint32_t camera_handle,
  *==========================================================================*/
 static int32_t mm_camera_intf_close(uint32_t camera_handle)
 {
-
-    return my_camera_ops->close_camera(camera_handle);
-
     int32_t rc = -1;
     uint8_t cam_idx = camera_handle & 0x00ff;
     mm_camera_obj_t * my_obj = NULL;
@@ -480,9 +421,6 @@ static int32_t mm_camera_intf_close(uint32_t camera_handle)
  *              attr, channel_cb, and userdata can be NULL. In this case,
  *              no matching logic will be performed in channel for the bundling.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_add_channel_t)(mm_camera_obj_t*, mm_camera_channel_attr_t*, mm_camera_buf_notify_t, void*);
-
 static uint32_t mm_camera_intf_add_channel(uint32_t camera_handle,
                                            mm_camera_channel_attr_t *attr,
                                            mm_camera_buf_notify_t channel_cb,
@@ -495,20 +433,10 @@ static uint32_t mm_camera_intf_add_channel(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_add_channel_t camera_add_channel;
-	camera_add_channel = (mm_camera_add_channel_t)dlsym(my_handle, "mm_camera_add_channel");
-	if (!camera_add_channel) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        ch_id = camera_add_channel(my_obj, attr, channel_cb, userdata);
+        ch_id = mm_camera_add_channel(my_obj, attr, channel_cb, userdata);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -531,9 +459,6 @@ static uint32_t mm_camera_intf_add_channel(uint32_t camera_handle,
  * NOTE       : all streams in the channel should be stopped already before
  *              this channel can be deleted.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_del_channel_t)(mm_camera_obj_t*, uint32_t);
-
 static int32_t mm_camera_intf_del_channel(uint32_t camera_handle,
                                           uint32_t ch_id)
 {
@@ -544,20 +469,10 @@ static int32_t mm_camera_intf_del_channel(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_del_channel_t camera_del_channel;
-	camera_del_channel = (mm_camera_del_channel_t)dlsym(my_handle, "mm_camera_del_channel");
-	if (!camera_del_channel) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_del_channel(my_obj, ch_id);
+        rc = mm_camera_del_channel(my_obj, ch_id);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -581,9 +496,6 @@ static int32_t mm_camera_intf_del_channel(uint32_t camera_handle,
  * NOTE       : all streams in the channel should be stopped already before
  *              this channel can be deleted.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_get_bundle_info_t)(mm_camera_obj_t*, uint32_t, cam_bundle_config_t*);
-
 static int32_t mm_camera_intf_get_bundle_info(uint32_t camera_handle,
                                               uint32_t ch_id,
                                               cam_bundle_config_t *bundle_info)
@@ -595,20 +507,10 @@ static int32_t mm_camera_intf_get_bundle_info(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_get_bundle_info_t camera_get_bundle_info;
-	camera_get_bundle_info = (mm_camera_get_bundle_info_t)dlsym(my_handle, "mm_camera_get_bundle_info");
-	if (!camera_get_bundle_info) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_get_bundle_info(my_obj, ch_id, bundle_info);
+        rc = mm_camera_get_bundle_info(my_obj, ch_id, bundle_info);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -630,9 +532,6 @@ static int32_t mm_camera_intf_get_bundle_info(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_register_event_notify_t)(mm_camera_obj_t*, mm_camera_event_notify_t, void*);
-
 static int32_t mm_camera_intf_register_event_notify(uint32_t camera_handle,
                                                     mm_camera_event_notify_t evt_cb,
                                                     void * user_data)
@@ -644,20 +543,10 @@ static int32_t mm_camera_intf_register_event_notify(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_register_event_notify_t camera_register_event_notify;
-	camera_register_event_notify = (mm_camera_register_event_notify_t)dlsym(my_handle, "mm_camera_register_event_notify");
-	if (!camera_register_event_notify) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_register_event_notify(my_obj, evt_cb, user_data);
+        rc = mm_camera_register_event_notify(my_obj, evt_cb, user_data);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -679,9 +568,6 @@ static int32_t mm_camera_intf_register_event_notify(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_qbuf_t)(mm_camera_obj_t*, uint32_t, mm_camera_buf_def_t*);
-
 static int32_t mm_camera_intf_qbuf(uint32_t camera_handle,
                                     uint32_t ch_id,
                                     mm_camera_buf_def_t *buf)
@@ -692,20 +578,10 @@ static int32_t mm_camera_intf_qbuf(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_qbuf_t camera_qbuf;
-	camera_qbuf = (mm_camera_qbuf_t)dlsym(my_handle, "mm_camera_qbuf");
-	if (!camera_qbuf) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_qbuf(my_obj, ch_id, buf);
+        rc = mm_camera_qbuf(my_obj, ch_id, buf);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -726,9 +602,6 @@ static int32_t mm_camera_intf_qbuf(uint32_t camera_handle,
  *              0  -- invalid stream handle, meaning the op failed
  *              >0 -- successfully added a stream with a valid handle
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_add_stream_t)(mm_camera_obj_t*, uint32_t);
-
 static uint32_t mm_camera_intf_add_stream(uint32_t camera_handle,
                                           uint32_t ch_id)
 {
@@ -741,20 +614,10 @@ static uint32_t mm_camera_intf_add_stream(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_add_stream_t camera_add_stream;
-	camera_add_stream = (mm_camera_add_stream_t)dlsym(my_handle, "mm_camera_add_stream");
-	if (!camera_add_stream) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        stream_id = camera_add_stream(my_obj, ch_id);
+        stream_id = mm_camera_add_stream(my_obj, ch_id);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -777,9 +640,6 @@ static uint32_t mm_camera_intf_add_stream(uint32_t camera_handle,
  *              -1 -- failure
  * NOTE       : stream should be stopped already before it can be deleted.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_del_stream_t)(mm_camera_obj_t*, uint32_t, uint32_t);
-
 static int32_t mm_camera_intf_del_stream(uint32_t camera_handle,
                                          uint32_t ch_id,
                                          uint32_t stream_id)
@@ -793,20 +653,10 @@ static int32_t mm_camera_intf_del_stream(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_del_stream_t camera_del_stream;
-	camera_del_stream = (mm_camera_del_stream_t)dlsym(my_handle, "mm_camera_del_stream");
-	if (!camera_del_stream) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_del_stream(my_obj, ch_id, stream_id);
+        rc = mm_camera_del_stream(my_obj, ch_id, stream_id);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -829,9 +679,6 @@ static int32_t mm_camera_intf_del_stream(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_config_stream_t)(mm_camera_obj_t*, uint32_t, uint32_t, mm_camera_stream_config_t*);
-
 static int32_t mm_camera_intf_config_stream(uint32_t camera_handle,
                                             uint32_t ch_id,
                                             uint32_t stream_id,
@@ -848,20 +695,10 @@ static int32_t mm_camera_intf_config_stream(uint32_t camera_handle,
 
     CDBG("%s :mm_camera_intf_config_stream stream_id = %d",__func__,stream_id);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_config_stream_t camera_config_stream;
-	camera_config_stream = (mm_camera_config_stream_t)dlsym(my_handle, "mm_camera_config_stream");
-	if (!camera_config_stream) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_config_stream(my_obj, ch_id, stream_id, config);
+        rc = mm_camera_config_stream(my_obj, ch_id, stream_id, config);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -882,9 +719,6 @@ static int32_t mm_camera_intf_config_stream(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_start_channel_t)(mm_camera_obj_t*, uint32_t);
-
 static int32_t mm_camera_intf_start_channel(uint32_t camera_handle,
                                             uint32_t ch_id)
 {
@@ -894,20 +728,10 @@ static int32_t mm_camera_intf_start_channel(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_start_channel_t camera_start_channel;
-	camera_start_channel = (mm_camera_start_channel_t)dlsym(my_handle, "mm_camera_start_channel");
-	if (!camera_start_channel) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_start_channel(my_obj, ch_id);
+        rc = mm_camera_start_channel(my_obj, ch_id);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -928,9 +752,6 @@ static int32_t mm_camera_intf_start_channel(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_stop_channel_t)(mm_camera_obj_t*, uint32_t);
-
 static int32_t mm_camera_intf_stop_channel(uint32_t camera_handle,
                                            uint32_t ch_id)
 {
@@ -940,20 +761,10 @@ static int32_t mm_camera_intf_stop_channel(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_stop_channel_t camera_stop_channel;
-	camera_stop_channel = (mm_camera_stop_channel_t)dlsym(my_handle, "mm_camera_stop_channel");
-	if (!camera_stop_channel) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_stop_channel(my_obj, ch_id);
+        rc = mm_camera_stop_channel(my_obj, ch_id);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -976,9 +787,6 @@ static int32_t mm_camera_intf_stop_channel(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_request_super_buf_t)(mm_camera_obj_t*, uint32_t, uint32_t);
-
 static int32_t mm_camera_intf_request_super_buf(uint32_t camera_handle,
                                                 uint32_t ch_id,
                                                 uint32_t num_buf_requested)
@@ -991,20 +799,10 @@ static int32_t mm_camera_intf_request_super_buf(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_request_super_buf_t camera_request_super_buf;
-	camera_request_super_buf = (mm_camera_request_super_buf_t)dlsym(my_handle, "mm_camera_request_super_buf");
-	if (!camera_request_super_buf) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_request_super_buf(my_obj, ch_id, num_buf_requested);
+        rc = mm_camera_request_super_buf(my_obj, ch_id, num_buf_requested);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1026,9 +824,6 @@ static int32_t mm_camera_intf_request_super_buf(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_cancel_super_buf_request_t)(mm_camera_obj_t*, uint32_t);
-
 static int32_t mm_camera_intf_cancel_super_buf_request(uint32_t camera_handle,
                                                        uint32_t ch_id)
 {
@@ -1040,20 +835,10 @@ static int32_t mm_camera_intf_cancel_super_buf_request(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_cancel_super_buf_request_t camera_cancel_super_buf_request;
-	camera_cancel_super_buf_request = (mm_camera_cancel_super_buf_request_t)dlsym(my_handle, "mm_camera_cancel_super_buf_request");
-	if (!camera_cancel_super_buf_request) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_cancel_super_buf_request(my_obj, ch_id);
+        rc = mm_camera_cancel_super_buf_request(my_obj, ch_id);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1075,9 +860,6 @@ static int32_t mm_camera_intf_cancel_super_buf_request(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_flush_super_buf_queue_t)(mm_camera_obj_t*, uint32_t, uint32_t);
-
 static int32_t mm_camera_intf_flush_super_buf_queue(uint32_t camera_handle,
                                                     uint32_t ch_id, uint32_t frame_idx)
 {
@@ -1089,20 +871,10 @@ static int32_t mm_camera_intf_flush_super_buf_queue(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_flush_super_buf_queue_t camera_flush_super_buf_queue;
-	camera_flush_super_buf_queue = (mm_camera_flush_super_buf_queue_t)dlsym(my_handle, "mm_camera_flush_super_buf_queue");
-	if (!camera_flush_super_buf_queue) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_flush_super_buf_queue(my_obj, ch_id, frame_idx);
+        rc = mm_camera_flush_super_buf_queue(my_obj, ch_id, frame_idx);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1124,9 +896,6 @@ static int32_t mm_camera_intf_flush_super_buf_queue(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_config_channel_notify_t)(mm_camera_obj_t*, uint32_t, mm_camera_super_buf_notify_mode_t);
-
 static int32_t mm_camera_intf_configure_notify_mode(uint32_t camera_handle,
                                                     uint32_t ch_id,
                                                     mm_camera_super_buf_notify_mode_t notify_mode)
@@ -1139,20 +908,10 @@ static int32_t mm_camera_intf_configure_notify_mode(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_config_channel_notify_t camera_config_channel_notify;
-	camera_config_channel_notify = (mm_camera_config_channel_notify_t)dlsym(my_handle, "mm_camera_config_channel_notify");
-	if (!camera_config_channel_notify) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_config_channel_notify(my_obj, ch_id, notify_mode);
+        rc = mm_camera_config_channel_notify(my_obj, ch_id, notify_mode);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1178,9 +937,6 @@ static int32_t mm_camera_intf_configure_notify_mode(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_map_buf_t)(mm_camera_obj_t*, uint8_t, int, uint32_t);
-
 static int32_t mm_camera_intf_map_buf(uint32_t camera_handle,
                                       uint8_t buf_type,
                                       int fd,
@@ -1192,20 +948,10 @@ static int32_t mm_camera_intf_map_buf(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_map_buf_t camera_map_buf;
-	camera_map_buf = (mm_camera_map_buf_t)dlsym(my_handle, "mm_camera_map_buf");
-	if (!camera_map_buf) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_map_buf(my_obj, buf_type, fd, size);
+        rc = mm_camera_map_buf(my_obj, buf_type, fd, size);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1228,9 +974,6 @@ static int32_t mm_camera_intf_map_buf(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_unmap_buf_t)(mm_camera_obj_t*, uint8_t);
-
 static int32_t mm_camera_intf_unmap_buf(uint32_t camera_handle,
                                         uint8_t buf_type)
 {
@@ -1240,20 +983,10 @@ static int32_t mm_camera_intf_unmap_buf(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_unmap_buf_t camera_unmap_buf;
-	camera_unmap_buf = (mm_camera_unmap_buf_t)dlsym(my_handle, "mm_camera_unmap_buf");
-	if (!camera_unmap_buf) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_unmap_buf(my_obj, buf_type);
+        rc = mm_camera_unmap_buf(my_obj, buf_type);
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1278,9 +1011,6 @@ static int32_t mm_camera_intf_unmap_buf(uint32_t camera_handle,
  *              domain socket. Corresponding fields of parameters to be set
  *              are already filled in by upper layer caller.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_set_stream_parms_t)(mm_camera_obj_t*, uint32_t, uint32_t, cam_stream_parm_buffer_t*);
-
 static int32_t mm_camera_intf_set_stream_parms(uint32_t camera_handle,
                                                uint32_t ch_id,
                                                uint32_t s_id,
@@ -1292,23 +1022,13 @@ static int32_t mm_camera_intf_set_stream_parms(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_set_stream_parms_t camera_set_stream_parms;
-	camera_set_stream_parms = (mm_camera_set_stream_parms_t)dlsym(my_handle, "mm_camera_set_stream_parms");
-	if (!camera_set_stream_parms) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     CDBG("%s :E camera_handle = %d,ch_id = %d,s_id = %d",
          __func__, camera_handle, ch_id, s_id);
 
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_set_stream_parms(my_obj, ch_id, s_id, parms);
+        rc = mm_camera_set_stream_parms(my_obj, ch_id, s_id, parms);
     }else{
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1336,9 +1056,6 @@ static int32_t mm_camera_intf_set_stream_parms(uint32_t camera_handle,
  *              fields of requested parameters will be filled in by server with
  *              detailed information.
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_get_stream_parms_t)(mm_camera_obj_t*, uint32_t, uint32_t, cam_stream_parm_buffer_t*);
-
 static int32_t mm_camera_intf_get_stream_parms(uint32_t camera_handle,
                                                uint32_t ch_id,
                                                uint32_t s_id,
@@ -1350,23 +1067,13 @@ static int32_t mm_camera_intf_get_stream_parms(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_get_stream_parms_t camera_get_stream_parms;
-	camera_get_stream_parms = (mm_camera_get_stream_parms_t)dlsym(my_handle, "mm_camera_get_stream_parms");
-	if (!camera_get_stream_parms) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     CDBG("%s :E camera_handle = %d,ch_id = %d,s_id = %d",
          __func__, camera_handle, ch_id, s_id);
 
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_get_stream_parms(my_obj, ch_id, s_id, parms);
+        rc = mm_camera_get_stream_parms(my_obj, ch_id, s_id, parms);
     }else{
         pthread_mutex_unlock(&g_intf_lock);
     }
@@ -1401,9 +1108,6 @@ static int32_t mm_camera_intf_get_stream_parms(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-
-typedef int32_t (*mm_camera_map_stream_buf_t)(mm_camera_obj_t*, uint32_t, uint32_t, uint8_t, uint32_t, int32_t, int, uint32_t);
-
 static int32_t mm_camera_intf_map_stream_buf(uint32_t camera_handle,
                                              uint32_t ch_id,
                                              uint32_t stream_id,
@@ -1419,23 +1123,13 @@ static int32_t mm_camera_intf_map_stream_buf(uint32_t camera_handle,
     pthread_mutex_lock(&g_intf_lock);
     my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
 
-    ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-
-    mm_camera_map_stream_buf_t camera_map_stream_buf;
-	camera_map_stream_buf = (mm_camera_map_stream_buf_t)dlsym(my_handle, "mm_camera_map_stream_buf");
-	if (!camera_map_stream_buf) {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return -1;
-	} else {
-	}
-
     CDBG("%s :E camera_handle = %d, ch_id = %d, s_id = %d, buf_idx = %d, plane_idx = %d",
          __func__, camera_handle, ch_id, stream_id, buf_idx, plane_idx);
 
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_map_stream_buf(my_obj, ch_id, stream_id,
+        rc = mm_camera_map_stream_buf(my_obj, ch_id, stream_id,
                                       buf_type, buf_idx, plane_idx,
                                       fd, size);
     }else{
@@ -1470,8 +1164,6 @@ static int32_t mm_camera_intf_map_stream_buf(uint32_t camera_handle,
  *              0  -- success
  *              -1 -- failure
  *==========================================================================*/
-typedef uint32_t (*camera_intf_unmap_stream_buf_t)(mm_camera_obj_t*, uint32_t, uint32_t, uint8_t, uint32_t, int32_t);
-
 static int32_t mm_camera_intf_unmap_stream_buf(uint32_t camera_handle,
                                                uint32_t ch_id,
                                                uint32_t stream_id,
@@ -1488,19 +1180,10 @@ static int32_t mm_camera_intf_unmap_stream_buf(uint32_t camera_handle,
     CDBG("%s :E camera_handle = %d, ch_id = %d, s_id = %d, buf_idx = %d, plane_idx = %d",
          __func__, camera_handle, ch_id, stream_id, buf_idx, plane_idx);
 
-	camera_intf_unmap_stream_buf_t camera_intf_unmap_stream_buf;
-	camera_intf_unmap_stream_buf = (camera_intf_unmap_stream_buf_t)dlsym(my_handle, "mm_camera_unmap_stream_buf");
-	if (camera_intf_unmap_stream_buf) {
-		ALOGE("%s: dlsym", __func__);
-	} else {
-		CDBG_ERROR("%s: cant do dlsymn", __func__);
-		return -1;
-	}
-
     if(my_obj) {
         pthread_mutex_lock(&my_obj->cam_lock);
         pthread_mutex_unlock(&g_intf_lock);
-        rc = camera_intf_unmap_stream_buf(my_obj, ch_id, stream_id,
+        rc = mm_camera_unmap_stream_buf(my_obj, ch_id, stream_id,
                                         buf_type, buf_idx, plane_idx);
     }else{
         pthread_mutex_unlock(&g_intf_lock);
@@ -1523,33 +1206,143 @@ static int32_t mm_camera_intf_unmap_stream_buf(uint32_t camera_handle,
 #define SAMSUNG_MAGIC_ENTITY_TYPE 65537
 #define SAMSUNG_MAGIC_GROUP_ID 2
 
-typedef uint8_t (*get_num_of_cameras_t)();
-
 uint8_t get_num_of_cameras()
 {
+    int rc = 0;
+    int dev_fd = 0;
+    struct media_device_info mdev_info;
+    int num_media_devices = 0;
+    uint8_t num_cameras = 0;
+    char subdev_name[32];
+    int32_t sd_fd = 0;
 
-    // open first time
-    my_handle = dlopen("/system/lib/libmmcamera_interface-impl.so", RTLD_LAZY);
-    uint8_t call;
-    get_num_of_cameras_t get_num_of_camera;
-    if (my_handle) {
-	get_num_of_camera = (get_num_of_cameras_t)dlsym(my_handle, "get_num_of_cameras");
-	if (get_num_of_camera) {
-		call = get_num_of_camera();
-		return call;
-	} else {
-		CDBG_ERROR("%s: cant do dlsymn", __func__);
-		return -1;
-	}
-    } else {
-	CDBG_ERROR("%s: cant do dlopen", __func__);
-	return -1;
+    CDBG("%s : E", __func__);
+    /* lock the mutex */
+    pthread_mutex_lock(&g_intf_lock);
+    while (1) {
+        uint32_t num_entities = 1U;
+        char dev_name[32];
+
+        snprintf(dev_name, sizeof(dev_name), "/dev/media%d", num_media_devices);
+        dev_fd = open(dev_name, O_RDWR | O_NONBLOCK);
+        if (dev_fd < 0) {
+            CDBG_ERROR("Done discovering media devices\n");
+            break;
+        }
+        num_media_devices++;
+        rc = ioctl(dev_fd, MEDIA_IOC_DEVICE_INFO, &mdev_info);
+        if (rc < 0) {
+            CDBG_ERROR("Error: ioctl media_dev failed: %s\n", strerror(errno));
+            close(dev_fd);
+            dev_fd = 0;
+            break;
+        }
+
+        if (strncmp(mdev_info.model, "msm_cam_dummy", sizeof(mdev_info.model) != 0)) {
+            close(dev_fd);
+            dev_fd = 0;
+            continue;
+        }
+
+        while (1) {
+            struct media_entity_desc entity;
+            memset(&entity, 0, sizeof(entity));
+            entity.id = num_entities++;
+            CDBG_ERROR("entity id %d", entity.id);
+            rc = ioctl(dev_fd, MEDIA_IOC_ENUM_ENTITIES, &entity);
+            if (rc < 0) {
+                CDBG_ERROR("Done enumerating media entities");
+                rc = 0;
+                break;
+            }
+            CDBG_ERROR("entity name %s type %d group id %d",
+                entity.name, entity.type, entity.group_id);
+            if (entity.type == SAMSUNG_MAGIC_ENTITY_TYPE &&
+                entity.group_id == SAMSUNG_MAGIC_GROUP_ID) {
+		CDBG_ERROR("WE GOT A MATCH!!!");
+		sd_fd = open(subdev_name, O_RDWR);
+    		if (sd_fd < 0) {
+        		CDBG_ERROR("%s: Open sensor_init subdev failed", __func__);
+			CDBG_ERROR("Doesnt open anyway XD!!!");
+    		}
+    		close(sd_fd);
+                snprintf(subdev_name, sizeof(dev_name), "/dev/%s", entity.name);
+                break;
+            }
+        }
+        close(dev_fd);
+        dev_fd = 0;
     }
-}
 
-int32_t mm_camera_intf_dummy_function(uint32_t camera_handle) {
-	ALOGE("%s: camera_handle(%d)", __func__, camera_handle);
-	return -1;
+    /* Open sensor_init subdev */
+    sd_fd = open(subdev_name, O_RDWR);
+    if (sd_fd < 0) {
+        CDBG_ERROR("%s: Open sensor_init subdev failed", __func__);
+        return FALSE;
+    }
+    close(sd_fd);
+
+    dev_fd = 0;
+
+    num_media_devices = 0;
+    while (1) {
+        uint32_t num_entities = 1U;
+        char dev_name[32];
+
+        snprintf(dev_name, sizeof(dev_name), "/dev/media%d", num_media_devices);
+        dev_fd = open(dev_name, O_RDWR | O_NONBLOCK);
+        if (dev_fd <= 0) {
+            CDBG("Done discovering media devices\n");
+            break;
+        }
+        num_media_devices++;
+        memset(&mdev_info, 0, sizeof(mdev_info));
+        rc = ioctl(dev_fd, MEDIA_IOC_DEVICE_INFO, &mdev_info);
+        if (rc < 0) {
+            CDBG_ERROR("Error: ioctl media_dev failed: %s\n", strerror(errno));
+            close(dev_fd);
+            dev_fd = 0;
+            num_cameras = 0;
+            break;
+        }
+
+        if(strncmp(mdev_info.model, MSM_CAMERA_NAME, sizeof(mdev_info.model)) != 0) {
+            close(dev_fd);
+            dev_fd = 0;
+            continue;
+        }
+
+        num_entities = 1;
+        while (1) {
+            struct media_entity_desc entity;
+            memset(&entity, 0, sizeof(entity));
+            entity.id = num_entities++;
+            rc = ioctl(dev_fd, MEDIA_IOC_ENUM_ENTITIES, &entity);
+            if (rc < 0) {
+                CDBG("Done enumerating media entities\n");
+                rc = 0;
+                break;
+            }
+            if(entity.type == MEDIA_ENT_T_DEVNODE_V4L && entity.group_id == QCAMERA_VNODE_GROUP_ID) {
+                strncpy(g_cam_ctrl.video_dev_name[num_cameras],
+                     entity.name, sizeof(entity.name));
+                break;
+            }
+        }
+
+        CDBG("%s: dev_info[id=%d,name='%s']\n",
+            __func__, num_cameras, g_cam_ctrl.video_dev_name[num_cameras]);
+
+        num_cameras++;
+        close(dev_fd);
+        dev_fd = 0;
+    }
+    g_cam_ctrl.num_cam = num_cameras;
+
+    /* unlock the mutex */
+    pthread_mutex_unlock(&g_intf_lock);
+    CDBG("%s: num_cameras=%d\n", __func__, g_cam_ctrl.num_cam);
+    return g_cam_ctrl.num_cam;
 }
 
 /* camera ops v-table */
@@ -1562,7 +1355,7 @@ static mm_camera_ops_t mm_camera_ops = {
     .do_auto_focus = mm_camera_intf_do_auto_focus,
     .cancel_auto_focus = mm_camera_intf_cancel_auto_focus,
     .prepare_snapshot = mm_camera_intf_prepare_snapshot,
-    .dummy_function = mm_camera_intf_dummy_function,
+    .unprepare_snapshot = mm_camera_intf_unprepare_snapshot,
     .map_buf = mm_camera_intf_map_buf,
     .unmap_buf = mm_camera_intf_unmap_buf,
     .add_channel = mm_camera_intf_add_channel,
@@ -1595,37 +1388,55 @@ static mm_camera_ops_t mm_camera_ops = {
  * RETURN     : ptr to a virtual table containing camera handle and operation table.
  *              NULL if failed.
  *==========================================================================*/
-
-typedef mm_camera_vtbl_t* (*camera_open_t)(uint8_t);
-
-mm_camera_vtbl_t *camera_open(uint8_t camera_idx)
+mm_camera_vtbl_t * camera_open(uint8_t camera_idx)
 {
-    mm_camera_vtbl_t* my_vtbl = malloc(sizeof(mm_camera_vtbl_t));
+    int32_t rc = 0;
+    mm_camera_obj_t* cam_obj = NULL;
 
-    memset(my_vtbl, 0, sizeof(mm_camera_vtbl_t));
+    CDBG("%s: E camera_idx = %d\n", __func__, camera_idx);
+    if (camera_idx >= g_cam_ctrl.num_cam) {
+        CDBG_ERROR("%s: Invalid camera_idx (%d)", __func__, camera_idx);
+        return NULL;
+    }
 
-    camera_open_t my_camera_open;
-    if (my_handle) {
-	my_camera_open = (camera_open_t)dlsym(my_handle, "camera_open");
-	if (my_camera_open) {
-		my_vtbl = my_camera_open(camera_idx);
-		if (!my_vtbl) {
-			CDBG_ERROR("%s: open failed, wrong offsets??", __func__);
-			return NULL;
-		} else {
-			CDBG_ERROR("%s: open successfull returning our vtable", __func__);
-			my_camera_ops = my_vtbl->ops;
-			my_vtbl->ops = &mm_camera_ops;
-			ALOGE("%s: stored the original ops", __func__);
-			ALOGE("%s: handle is %d", __func__, my_vtbl->camera_handle);
-			return my_vtbl;
-		}
-	} else {
-		CDBG_ERROR("%s: cant to dlsymn", __func__);
-		return NULL;
-	}
-    } else {
-	CDBG_ERROR("%s: cant to dlopen", __func__);
-	return NULL;
+    pthread_mutex_lock(&g_intf_lock);
+    /* opened already */
+    if(NULL != g_cam_ctrl.cam_obj[camera_idx]) {
+        /* Add reference */
+        g_cam_ctrl.cam_obj[camera_idx]->ref_count++;
+        pthread_mutex_unlock(&g_intf_lock);
+        CDBG("%s:  opened alreadyn", __func__);
+        return &g_cam_ctrl.cam_obj[camera_idx]->vtbl;
+    }
+
+    cam_obj = (mm_camera_obj_t *)malloc(sizeof(mm_camera_obj_t));
+    if(NULL == cam_obj) {
+        pthread_mutex_unlock(&g_intf_lock);
+        CDBG("%s:  no mem", __func__);
+        return NULL;
+    }
+
+    /* initialize camera obj */
+    memset(cam_obj, 0, sizeof(mm_camera_obj_t));
+    cam_obj->ref_count++;
+    cam_obj->my_hdl = mm_camera_util_generate_handler(camera_idx);
+    cam_obj->vtbl.camera_handle = cam_obj->my_hdl; /* set handler */
+    cam_obj->vtbl.ops = &mm_camera_ops;
+    pthread_mutex_init(&cam_obj->cam_lock, NULL);
+
+    rc = mm_camera_open(cam_obj);
+    if(rc != 0) {
+        CDBG_ERROR("%s: mm_camera_open err = %d", __func__, rc);
+        pthread_mutex_destroy(&cam_obj->cam_lock);
+        g_cam_ctrl.cam_obj[camera_idx] = NULL;
+        free(cam_obj);
+        cam_obj = NULL;
+        pthread_mutex_unlock(&g_intf_lock);
+        return NULL;
+    }else{
+        CDBG("%s: Open succeded\n", __func__);
+        g_cam_ctrl.cam_obj[camera_idx] = cam_obj;
+        pthread_mutex_unlock(&g_intf_lock);
+        return &cam_obj->vtbl;
     }
 }

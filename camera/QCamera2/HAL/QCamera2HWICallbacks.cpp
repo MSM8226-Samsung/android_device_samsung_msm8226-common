@@ -178,52 +178,6 @@ void QCamera2HardwareInterface::capture_channel_cb_routine(mm_camera_super_buf_t
 }
 
 /*===========================================================================
- * FUNCTION   : postproc_stream_cb_routine
- *
- * DESCRIPTION: helper function to handle postprocess superbuf callback directly from
- *              mm-camera-interface
- *
- * PARAMETERS :
- *   @recvd_frame : received super buffer
- *   @userdata    : user data ptr
- *
- * RETURN    : None
- *
- * NOTE      : recvd_frame will be released after this call by caller, so if
- *             async operation needed for recvd_frame, it's our responsibility
- *             to save a copy for this variable to be used later.
-*==========================================================================*/
-void QCamera2HardwareInterface::postproc_stream_cb_routine(mm_camera_super_buf_t *recvd_frame,
-                                                            void *userdata)
-{
-    ALOGD("[KPI Perf] %s: E", __func__);
-    ALOGE("%s: this is hacked, were using hardcoded stuff to get the camera handle correctly. we assume the interface is correct ^^. This works as the call to the PP gets fixd by gcc to be an internal call", __func__);
-    QCamera2HardwareInterface *pme = (QCamera2HardwareInterface *)userdata;
-    if (recvd_frame == NULL) {
-        ALOGE("%s: recvd_frame not valid", __func__);
-        // simply free super frame
-        free(recvd_frame);
-        return;
-    }
-
-    ALOGE("%s: processing recvd_frame with camera_handle(%d), ch_id(%d), num_bufs(%d)", __func__, recvd_frame->camera_handle, recvd_frame->ch_id, recvd_frame->num_bufs);
-
-    // save a copy for the superbuf
-    mm_camera_super_buf_t* frame =
-               (mm_camera_super_buf_t *)malloc(sizeof(mm_camera_super_buf_t));
-    if (frame == NULL) {
-        ALOGE("%s: Error allocating memory to save received_frame structure.", __func__);
-        return;
-    }
-    *frame = *recvd_frame;
-
-    // send to postprocessor
-    pme->m_postprocessor.processPPData(frame);
-
-    ALOGD("[KPI Perf] %s: X", __func__);
-}
-
-/*===========================================================================
  * FUNCTION   : postproc_channel_cb_routine
  *
  * DESCRIPTION: helper function to handle postprocess superbuf callback directly from
@@ -1100,11 +1054,10 @@ void * QCameraCbNotifier::cbNotifyRoutine(void * data)
         } while (ret != 0);
 
         camera_cmd_type_t cmd = cmdThread->getCmd();
-        ALOGE("%s: get cmd %d", __func__, cmd);
+        ALOGV("%s: get cmd %d", __func__, cmd);
         switch (cmd) {
         case CAMERA_CMD_TYPE_START_DATA_PROC:
             {
-		ALOGE("%s: doing snapshot stuff", __func__);
                 isSnapshotActive = TRUE;
                 numOfSnapshotExpected = pme->mParent->numOfSnapshotsExpected();
                 numOfSnapshotRcvd = 0;
@@ -1176,7 +1129,6 @@ void * QCameraCbNotifier::cbNotifyRoutine(void * data)
                             break;
                         case QCAMERA_DATA_SNAPSHOT_CALLBACK:
                             {
-				ALOGE("%s: got snapshot callback", __func__);
                                 if (TRUE == isSnapshotActive && pme->mDataCb ) {
                                     numOfSnapshotRcvd++;
                                     if (numOfSnapshotExpected > 0 &&
@@ -1311,9 +1263,7 @@ void QCameraCbNotifier::setCallbacks(camera_notify_callback notifyCb,
  *==========================================================================*/
 int32_t QCameraCbNotifier::startSnapshots()
 {
-    ALOGE("%s: E", __func__);
     return mProcTh.sendCmd(CAMERA_CMD_TYPE_START_DATA_PROC, FALSE, TRUE);
-    ALOGE("%s: X", __func__);
 }
 
 /*===========================================================================
@@ -1327,9 +1277,7 @@ int32_t QCameraCbNotifier::startSnapshots()
  *==========================================================================*/
 void QCameraCbNotifier::stopSnapshots()
 {
-    ALOGE("%s: E", __func__);
     mProcTh.sendCmd(CAMERA_CMD_TYPE_STOP_DATA_PROC, FALSE, TRUE);
-    ALOGE("%s: X", __func__);
 }
 
 }; // namespace qcamera

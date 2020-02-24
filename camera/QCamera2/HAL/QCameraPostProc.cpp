@@ -191,8 +191,6 @@ int32_t QCameraPostProcessor::start(QCameraChannel *pSrcChannel)
     m_dataProcTh.sendCmd(CAMERA_CMD_TYPE_START_DATA_PROC, FALSE, FALSE);
     m_parent->m_cbNotifier.startSnapshots();
 
-    ALOGE("%s: E", __func__);
-
     return rc;
 }
 

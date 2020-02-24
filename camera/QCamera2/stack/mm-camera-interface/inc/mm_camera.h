@@ -72,9 +72,8 @@ typedef enum
     MM_CAMERA_CMD_TYPE_REQ_DATA_CB,/* request data */
     MM_CAMERA_CMD_TYPE_SUPER_BUF_DATA_CB,    /* superbuf dataB CMD */
     MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY, /* configure notify mode */
-    MM_CAMERA_CMD_TYPE_START_ZSL, /* start zsl snapshot for channel */
-    MM_CAMERA_CMD_TYPE_STOP_ZSL, /* stop zsl snapshot for channel */
     MM_CAMERA_CMD_TYPE_FLUSH_QUEUE, /* flush queue */
+    MM_CAMERA_CMD_TYPE_UNPREPARE_SNAPSHOT_ZSL, /* stop snapshot zsl */
     MM_CAMERA_CMD_TYPE_GENERAL,  /* general cmd */
     MM_CAMERA_CMD_TYPE_MAX
 } mm_camera_cmdcb_type_t;

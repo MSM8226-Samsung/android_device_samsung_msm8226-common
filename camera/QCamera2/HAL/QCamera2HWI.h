@@ -374,8 +374,6 @@ private:
                                            void *userdata);
     static void postproc_channel_cb_routine(mm_camera_super_buf_t *recvd_frame,
                                             void *userdata);
-    static void postproc_stream_cb_routine(mm_camera_super_buf_t *recvd_frame,
-                                            void *userdata);
     static void nodisplay_preview_stream_cb_routine(mm_camera_super_buf_t *frame,
                                                     QCameraStream *stream,
                                                     void *userdata);

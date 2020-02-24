@@ -1531,8 +1531,7 @@ int32_t mm_channel_handle_metadata(
             if (metadata->prep_snapshot_done_state == NEED_FUTURE_FRAME) {
                 /* Set expected frame id to a future frame idx, large enough to wait
                  * for good_frame_idx_range, and small enough to still capture an image */
-                const int max_future_frame_offset = 100;
-                queue->expected_frame_id += max_future_frame_offset;
+                queue->expected_frame_id = queue->expected_frame_id + 0x19;
 
                 mm_channel_superbuf_flush(ch_obj, queue);
 
@@ -1596,12 +1595,15 @@ int32_t mm_channel_superbuf_comp_and_enqueue(
         return -1;
     }
 
+
+#if 0
     if (mm_channel_util_seq_comp_w_rollover(buf_info->frame_idx,
                                             queue->expected_frame_id) < 0) {
         /* incoming buf is older than expected buf id, will discard it */
         mm_channel_qbuf(ch_obj, buf_info->buf);
         return 0;
     }
+#endif
 
     if (MM_CAMERA_SUPER_BUF_PRIORITY_NORMAL != queue->attr.priority) {
         /* TODO */
